@@ -115,6 +115,7 @@ function SorteioCestaBalet() {
   const [orderId, setOrderId] = useState("");
   const [pixCode, setPixCode] = useState("");
   const [copiado, setCopiado] = useState(false);
+  const [enviandoPedido, setEnviandoPedido] = useState(false);
   const intervalRef = useRef(null);
   const qrRef = useRef(null);
 
@@ -181,11 +182,13 @@ function SorteioCestaBalet() {
 
   const iniciarPix = async (e) => {
     e.preventDefault();
+    if (enviandoPedido) return; // trava: já tem um envio em andamento
     if (!nome.trim() || whats.trim().length < 8) return;
     if (disponiveis < qtd) {
       setStep("esgotado");
       return;
     }
+    setEnviandoPedido(true);
     const novoOrderId = "PED" + Date.now();
     try {
       const resp = await fetch(
@@ -196,10 +199,12 @@ function SorteioCestaBalet() {
       const data = await resp.json();
       if (!data.ok) {
         setStep("erro");
+        setEnviandoPedido(false);
         return;
       }
     } catch (err) {
       setStep("erro");
+      setEnviandoPedido(false);
       return;
     }
 
@@ -215,6 +220,7 @@ function SorteioCestaBalet() {
     );
     setTimer(TEMPO_PIX_SEGUNDOS);
     setStep("pix");
+    setEnviandoPedido(false);
     clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setTimer((t) => {
@@ -909,12 +915,20 @@ function SorteioCestaBalet() {
           position: absolute;
           top: 0;
           bottom: 0;
-          width: 52%;
-          background: radial-gradient(ellipse at center, #521a30 0%, var(--wine) 55%, var(--wine-deep) 100%);
+          width: 50%;
+          background:
+            repeating-linear-gradient(
+              90deg,
+              rgba(0,0,0,0.16) 0px,
+              rgba(0,0,0,0.16) 12px,
+              rgba(255,255,255,0.05) 12px,
+              rgba(255,255,255,0.05) 24px
+            ),
+            radial-gradient(ellipse at center, #521a30 0%, var(--wine) 55%, var(--wine-deep) 100%);
           transition: transform 0.9s cubic-bezier(.65,0,.35,1);
         }
-        .sb-intro-esquerda { left: 0; border-right: 3px solid var(--gold); }
-        .sb-intro-direita { right: 0; border-left: 3px solid var(--gold); }
+        .sb-intro-esquerda { left: 0; box-shadow: inset -22px 0 35px -12px rgba(0,0,0,0.6); }
+        .sb-intro-direita { right: 0; box-shadow: inset 22px 0 35px -12px rgba(0,0,0,0.6); }
         .sb-intro-abrindo .sb-intro-esquerda { transform: translateX(-100%); }
         .sb-intro-abrindo .sb-intro-direita { transform: translateX(100%); }
         .sb-intro-conteudo {
@@ -1170,7 +1184,9 @@ function SorteioCestaBalet() {
                   <label>WhatsApp (com DDD)</label>
                   <input className="sb-input" value={whats} onChange={(e) => setWhats(e.target.value)} placeholder="(51) 90000-0000" required />
                 </div>
-                <button className="sb-submit" type="submit">Gerar Pix</button>
+                <button className="sb-submit" type="submit" disabled={enviandoPedido}>
+                  {enviandoPedido ? "Gerando..." : "Gerar Pix"}
+                </button>
               </form>
             )}
 
